@@ -1,0 +1,17 @@
+{
+  "name": "vectorlog",
+  "version": "1.0.0",
+  "description": "A utility used to log INS data from a VectorNav VN200.",
+  "repository": "bitbucket:lidarusa/vectorlog",
+  "main": "app.js",
+  "dependencies": {
+    "serialport": "~1.7.4",
+    "bluebird": "~2.9.27"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Adam Brown",
+  "license": "BSD-2-Clause"
+}

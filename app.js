@@ -32,8 +32,6 @@ Promise.try(function() {
 }).then(function() {
     var logFile = './logs/' + Date.now().toString() + ".log";
     return serialLogger.open(port, logFile);
-}).then(function() {
-    console.log("Woah slow down");
 }).catch(function(e) {
     console.error("Final: ", e);
 });

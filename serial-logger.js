@@ -7,7 +7,7 @@ var serialPort = null;
 
 function _isValidPort(port) {
     return Promise.try(function() {
-        return _getSerialPortNames();
+        return module.exports.getSerialPortNames();
     }).then(function(serialPortNames) {
         if( serialPortNames.indexOf(port) == -1 ) {
             return false;
@@ -17,76 +17,82 @@ function _isValidPort(port) {
     });
 }
 
-function _getSerialPortNames() {
-    return _getAvailableSerialPorts().then(function(serialPorts) {
-        var portNames = [];
-        serialPorts.forEach(function(port) {
-            portNames.push(port.comName);
-        });
-
-        return portNames;
-    });
-}
-
-function _getAvailableSerialPorts() {
-    return SerialPort.listAsync().then(function(serialPorts) {
-        return serialPorts;
-    });
-}
-
 module.exports = {
-    open: function(port, logFile, errorCallback) {
-        return Promise.try(function() {
-            _isValidPort(port).then(function (result) {
-                if (!result) errorCallback({type: 'InvalidPort', message: 'Port \'' + port + '\' does not exist.'});
+    open: function(port, logFile, callback) {
+                return Promise.try(function() {
+                    return _isValidPort(port);
+                }).then(function (result) {
+                    if (!result) {
+                        throw new Error("Port " + port + " does not exist.");
+                    }
 
-                serialPort = new SerialPort.SerialPort(port,
-                    {baudrate: 921600},
-                    false
-                );
+                    serialPort = new SerialPort.SerialPort(port,
+                        {baudrate: 921600},
+                        false
+                    );
 
-                vectorStream = fs.createWriteStream(logFile);
-                vectorStream.on("error", function (err) {
-                    errorCallback(err);
-                });
+                    vectorStream = fs.createWriteStream(logFile);
 
-                serialPort.openAsync().then(function () {
-                    serialPort.on("data", function (data) {
-                        vectorStream.write(data);
+                    return Promise.try(function(){
+                        return serialPort.openAsync().then(
+                            serialPort.on("error", function(e) {
+                                console.error(e);
+                            })
+                        );
+                    }).then(function () {
+                        return new Promise(function(resolve, reject){
+                            serialPort
+                                .pipe(vectorStream)
+                                .on("finish", function(){
+                                    resolve();
+                                })
+                                .on("error", function(err){
+                                    reject(err);
+                                });
+                        });
                     });
-
-                    serialPort.on("close", function () {
-                        if (vectorStream != null) {
-                            vectorStream.close();
-                        }
-                    });
-
-                    serialPort.on("error", function (e) {
-                        console.error("SerialPort.onError: ", e);
-                    });
-                }).catch(function (err) {
-                    errorCallback(err);
-                });
-            }).catch(function (e) {
-                throw e
-            });
-        }).nodeify();
+                }).nodeify(callback);
     },
 
     close: function() {
-        if( serialPort != null ) {
-            serialPort.closeAsync().then(function() {
-                if( vectorStream != null ) {
-                    vectorStream.close();
-                }
-            });
-        }
+        return Promise.try(function() {
+            if (serialPort != null) {
+                serialPort.closeAsync().then(function () {
+                    if (vectorStream != null) {
+                        vectorStream.close();
+                    }
+                });
+            }
+        });
     },
 
     printSerialPorts: function() {
-        return _getAvailableSerialPorts().then(function(serialPorts) {
-            serialPorts.forEach(function(port) {
-                console.log(port.comName);
+        return Promise.try(function() {
+            return module.exports.getAvailableSerialPorts().then(function(serialPorts) {
+                serialPorts.forEach(function(port) {
+                    console.log(port.comName);
+                });
+            });
+        });
+    },
+
+    getSerialPortNames: function() {
+        return Promise.try(function() {
+            return module.exports.getAvailableSerialPorts().then(function(serialPorts) {
+                var portNames = [];
+                serialPorts.forEach(function(port) {
+                    portNames.push(port.comName);
+                });
+
+                return portNames;
+            });
+        });
+    },
+
+    getAvailableSerialPorts: function() {
+        return Promise.try(function() {
+            return SerialPort.listAsync().then(function(serialPorts) {
+                return serialPorts;
             });
         });
     }

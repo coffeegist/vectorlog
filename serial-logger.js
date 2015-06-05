@@ -36,38 +36,41 @@ function _getAvailableSerialPorts() {
 
 module.exports = {
     open: function(port, logFile, errorCallback) {
-        _isValidPort(port).then(function(result) {
-            if( !result ) errorCallback({type:'InvalidPort', message:'Port \'' + port + '\' does not exist.'});
+        return Promise.try(function() {
+            _isValidPort(port).then(function (result) {
+                if (!result) errorCallback({type: 'InvalidPort', message: 'Port \'' + port + '\' does not exist.'});
 
-            serialPort = new SerialPort.SerialPort(port,
-                {baudrate: 921600},
-                false
-            );
+                serialPort = new SerialPort.SerialPort(port,
+                    {baudrate: 921600},
+                    false
+                );
 
-            vectorStream = fs.createWriteStream(logFile);
-            vectorStream.on("error", function (err) {
-                errorCallback(err);
+                vectorStream = fs.createWriteStream(logFile);
+                vectorStream.on("error", function (err) {
+                    errorCallback(err);
+                });
+
+                serialPort.openAsync().then(function () {
+                    serialPort.on("data", function (data) {
+                        vectorStream.write(data);
+                    });
+
+                    serialPort.on("close", function () {
+                        if (vectorStream != null) {
+                            vectorStream.close();
+                        }
+                    });
+
+                    serialPort.on("error", function (e) {
+                        console.error("SerialPort.onError: ", e);
+                    });
+                }).catch(function (err) {
+                    errorCallback(err);
+                });
+            }).catch(function (e) {
+                throw e
             });
-
-            serialPort.openAsync().then(function () {
-                serialPort.on("data", function (data) {
-
-                    vectorStream.write(data);
-                });
-
-                serialPort.on("close", function () {
-                    if (vectorStream != null) {
-                        vectorStream.close();
-                    }
-                });
-
-                serialPort.on("error", function (e) {
-                    console.error("SerialPort.onError: ", e);
-                });
-            }).catch(function (err) {
-                errorCallback(err);
-            });
-        }).catch(function(e){throw e});
+        }).nodeify();
     },
 
     close: function() {

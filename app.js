@@ -24,7 +24,7 @@ Promise.try(function(){ // If no port specified, show usage and available ports.
     }
 }).then(function() {
     return ensureLoggingDirectory('./logs');
-}).then(function(logFile) {
+}).then(function() {
     var logFile = './logs/' + Date.now().toString() + ".log";
 
     serialLogger.openAsync(port, logFile).catch(
